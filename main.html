@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conlang Builder - Complete Implementation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --background: #f9f9f9;
+            --sidebar: #f8f9fa;
+            --border: #dee2e6;
+            --text: #333;
+            --help: #6c757d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; line-height: 1.6; color: var(--text); background: var(--background); padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); overflow: hidden; }
+        header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 20px; text-align: center; position: relative; }
+        h1 { font-size: 2rem; margin-bottom: 10px; }
+        .app-description { font-size: 1rem; opacity: 0.9; }
+        .settings-button { position: absolute; top: 15px; right: 15px; background: rgba(255, 255, 255, 0.2); border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; }
+        .main-content { display: flex; min-height: 600px; }
+        .sidebar { width: 220px; background: var(--sidebar); padding: 15px; border-right: 1px solid var(--border); }
+        .nav-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 5px; border-radius: 5px; cursor: pointer; transition: all 0.3s; }
+        .nav-item:hover { background: rgba(0, 0, 0, 0.05); }
+        .nav-item.active { background: var(--secondary); color: white; font-weight: bold; }
+        .advanced-indicator { font-size: 0.7rem; background: var(--accent); color: white; padding: 2px 6px; border-radius: 10px; }
+        .complexity-meter { height: 8px; background: #e9ecef; border-radius: 4px; margin: 15px 0 8px; overflow: hidden; }
+        #complexityFill { height: 100%; background: linear-gradient(90deg, #2ecc71, #f39c12, #e74c3c); width: 20%; transition: width 0.5s; }
+        .content-area { flex: 1; padding: 15px; overflow-y: auto; max-height: 650px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        h2 { color: var(--primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); font-size: 1.5rem; }
+        .help-text { color: var(--help); margin-bottom: 15px; font-style: italic; font-size: 0.9rem; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; }
+        input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; font-size: 0.9rem; }
+        textarea { min-height: 80px; resize: vertical; }
+        .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+        .checkbox-item { display: flex; align-items: center; }
+        .checkbox-item input { margin-right: 6px; }
+        .advanced-toggle { background: none; border: none; color: var(--secondary); cursor: pointer; font-size: 0.9rem; margin-bottom: 12px; display: flex; align-items: center; padding: 4px 0; }
+        .advanced-options { display: none; padding: 15px; background: rgba(0, 0, 0, 0.03); border-radius: 4px; margin-bottom: 15px; }
+        h3 { color: var(--primary); margin: 12px 0; padding-bottom: 4px; border-bottom: 1px solid var(--border); font-size: 1.2rem; }
+        .generate-btn, .export-btn { background: var(--success); color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; margin-right: 8px; }
+        .export-btn { background: var(--secondary); }
+        .output-area { margin-top: 25px; padding: 15px; background: #f8f9fa; border-radius: 4px; }
+        .language-doc, .translation-breakdown, .language-output { padding: 12px; background: white; border-radius: 4px; margin: 12px 0; border: 1px solid var(--border); }
+        .language-output { font-family: monospace; white-space: pre-wrap; min-height: 80px; }
+        .settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .settings-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 450px; max-height: 80vh; overflow-y: auto; }
+        .ad-banner { width: 100%; background: #f5f5f5; padding: 12px; text-align: center; border-top: 1px solid #ddd; margin-top: 25px; border-radius: 0 0 8px 8px; }
+        .ad-label { font-size: 0.8rem; color: #888; margin-bottom: 4px; }
+        .ad-placeholder { width: 100%; height: 70px; background: linear-gradient(45deg, #eee 25%, #f9f9f9 25%, #f9f9f9 50%, #eee 50%, #eee 75%, #f9f9f9 75%, #f9f9f9 100%); display: flex; align-items: center; justify-content: center; color: #888; font-size: 0.8rem; border: 1px dashed #ccc; border-radius: 4px; }
+        .validation-error { color: #e74c3c; font-size: 0.8rem; margin-top: 4px; }
+        .validation-ok { color: #2ecc71; font-size: 0.8rem; margin-top: 4px; }
+        .ipa-example { font-family: monospace; background: #f8f9fa; padding: 2px 4px; border-radius: 3px; border: 1px solid #e9ecef; }
+        .rule-example { background: #f8f9fa; padding: 8px; border-radius: 4px; margin: 8px 0; border-left: 3px solid var(--secondary); font-size: 0.9rem; }
+        @media (max-width: 900px) { .main-content { flex-direction: column; } .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); } }
+        @media (max-width: 600px) { .checkbox-group { grid-template-columns: 1fr; } h1 { font-size: 1.7rem; } header { padding: 15px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Conlang Builder</h1>
+            <p class="app-description">Create your own constructed language with comprehensive linguistic features</p>
+            <button class="settings-button" id="settingsButton"><i class="fas fa-cog"></i></button>
+        </header>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="nav-item active" data-target="phonology"><span><i class="fas fa-microphone-alt"></i> Phonology</span></div>
+                <div class="nav-item" data-target="syllables"><span><i class="fas fa-language"></i> Syllables</span></div>
+                <div class="nav-item" data-target="phonotactics"><span><i class="fas fa-project-diagram"></i> Phonotactics</span><span class="advanced-indicator">Advanced</span></div>
+                <div class="nav-item" data-target="orthography"><span><i class="fas fa-font"></i> Orthography</span></div>
+                <div class="nav-item" data-target="grammar"><span><i class="fas fa-book"></i> Grammar</span><span class="advanced-indicator">Advanced</span></div>
+                <div class="nav-item" data-target="morphology"><span><i class="fas fa-shapes"></i> Morphology</span><span class="advanced-indicator">Advanced</span></div>
+                <div class="nav-item" data-target="lexicon"><span><i class="fas fa-book-open"></i> Lexicon</span></div>
+                <div class="nav-item" data-target="numbers"><span><i class="fas fa-calculator"></i> Numbers</span><span class="advanced-indicator">Optional</span></div>
+                <div class="nav-item" data-target="advanced"><span><i class="fas fa-cogs"></i> Advanced</span><span class="advanced-indicator">Expert</span></div>
+                <div class="nav-item" data-target="generate"><span><i class="fas fa-magic"></i> Generate</span></div>
+                
+                <div class="complexity-meter"><div id="complexityFill" style="width: 20%;"></div></div>
+                <p>Language Complexity: <span id="complexityText">Low</span></p>
+            </div>
+            
+            <div class="content-area">
+                <!-- Phonology Section -->
+                <section id="phonology" class="section active">
+                    <h2><i class="fas fa-microphone-alt"></i> Phonology</h2>
+                    <p class="help-text">Select the sounds that will be used in your language</p>
+                    
+                    <div class="form-group">
+                        <label>Consonants</label>
+                        <div class="checkbox-group" id="consonants"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Vowels</label>
+                        <div class="checkbox-group" id="vowels"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Additional Phonemes</label>
+                        <textarea id="additionalPhonemes" placeholder="Add custom phonemes (IPA format) separated by commas"></textarea>
+                        <p class="help-text">Example: <span class="ipa-example">ʈ, ɖ, ɳ, ɭ, ʂ, ʐ, ɻ</span></p>
+                    </div>
+                    
+                    <button class="advanced-toggle" onclick="toggleAdvancedOptions('phonologyAdvanced')"><i class="fas fa-cog"></i> Advanced Options</button>
+                    
+                    <div id="phonologyAdvanced" class="advanced-options">
+                        <h3>Advanced Phonology</h3>
+                        <div class="form-group">
+                            <label>Phoneme Features</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item"><input type="checkbox" id="featureTone"><label for="featureTone">Tonal Language</label></div>
+                                <div class="checkbox-item"><input type="checkbox" id="featureVowelLength"><label for="featureVowelLength">Vowel Length</label></div>
+                                <div class="checkbox-item"><input type="checkbox" id="featureConsonantLength"><label for="featureConsonantLength">Consonant Length</label></div>
+                                <div class="checkbox-item"><input type="checkbox" id="featureClick"><label for="featureClick">Click Consonants</label></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Allophones</label>
+                            <textarea id="allophones" placeholder="Define allophonic variations"></textarea>
+                            <p class="help-text">Describe how sounds change in specific environments</p>
+                            <div class="rule-example"><strong>Example:</strong> /n/ becomes [ŋ] before velar consonants (/k/, /g/)</div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Syllable Structure Section -->
+                <section id="syllables" class="section">
+                    <h2><i class="fas fa-language"></i> Syllable Structure</h2>
+                    <p class="help-text">Define the structure of syllables in your language</p>
+                    
+                    <div class="form-group">
+                        <label>Maximum Syllable Structure</label>
+                        <select id="syllableStructure">
+                            <option value="CV">CV (Consonant-Vowel)</option>
+                            <option value="CVC">CVC</option>
+                            <option value="CCVC">CCVC</option>
+                            <option value="CVCC">CVCC</option>
+                            <option value="CCVCC">CCVCC</option>
+                            <option value="custom">Custom Structure</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="customSyllableGroup" style="display: none;">
+                        <label>Custom Syllable Pattern</label>
+                        <input type="text" id="customSyllable" placeholder="e.g., (C)(C)V(C)(C)">
+                        <p class="help-text">Use C for consonant, V for vowel, and parentheses for optional elements</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Allowed Onsets</label>
+                        <textarea id="allowedOnsets" placeholder="List allowed consonant clusters at syllable beginnings"></textarea>
+                        <p class="help-text">Example: pl, tr, sk, sp, st</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Allowed Codas</label>
+                        <textarea id="allowedCodas" placeholder="List allowed consonant clusters at syllable endings"></textarea>
+                        <p class="help-text">Example: mp, nt, rk, lt, sp</p>
+                    </div>
+                </section>
+                
+                <!-- Phonotactics Section -->
+                <section id="phonotactics" class="section">
+                    <h2><i class="fas fa-project-diagram"></i> Phonotactics</h2>
+                    <p class="help-text">Define rules for how sounds can be combined in your language</p>
+                    
+                    <div class="form-group">
+                        <label>Allowed Consonant Clusters</label>
+                        <textarea id="consonantClusters" placeholder="List allowed consonant clusters (e.g., pl, tr, sk)"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Vowel Combinations</label>
+                        <textarea id="vowelCombinations" placeholder="List allowed vowel combinations (e.g., ai, ou, ea)"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Phonotactic Constraints</label>
+                        <textarea id="phonotacticConstraints" placeholder="Describe any constraints on sound combinations"></textarea>
+                        <p class="help-text">Example: No word-final voiced stops, no /ŋ/ at word beginning</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Stress Patterns</label>
+                        <select id="stressPattern">
+                            <option value="fixed">Fixed stress</option>
+                            <option value="weight-sensitive">Weight-sensitive stress</option>
+                            <option value="lexical">Lexical stress</option>
+                            <option value="tone">Tonal system</option>
+                        </select>
+                    </div>
+                </section>
+                
+                <!-- Orthography Section -->
+                <section id="orthography" class="section">
+                    <h2><i class="fas fa-font"></i> Orthography</h2>
+                    <p class="help-text">Define how your language will be written</p>
+                    
+                    <div class="form-group">
+                        <label>Writing System</label>
+                        <select id="writingSystem">
+                            <option value="latin">Latin Alphabet</option>
+                            <option value="cyrillic">Cyrillic Alphabet</option>
+                            <option value="arabic">Arabic Script</option>
+                            <option value="devanagari">Devanagari</option>
+                            <option value="syllabary">Syllabary</option>
+                            <option value="abugida">Abugida</option>
+                            <option value="logographic">Logographic</option>
+                            <option value="custom">Custom Script</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Letter-to-Sound Correspondence</label>
+                        <textarea id="letterSound" placeholder="Describe how letters represent sounds"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Capitalization Rules</label>
+                        <select id="capitalization">
+                            <option value="sentence">Sentence case only</option>
+                            <option value="proper">Proper nouns capitalized</option>
+                            <option value="none">No capitalization</option>
+                        </select>
+                    </div>
+                    
+                    <button class="advanced-toggle" onclick="toggleAdvancedOptions('orthographyAdvanced')"><i class="fas fa-cog"></i> Advanced Options</button>
+                    
+                    <div id="orthographyAdvanced" class="advanced-options">
+                        <h3>Advanced Orthography</h3>
+                        <div class="form-group">
+                            <label>Digraphs and Trigraphs</label>
+                            <textarea id="digraphs" placeholder="List multiletter representations of single sounds"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Diacritics</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item"><input type="checkbox" id="diacriticAcute"><label for="diacriticAcute">Acute accent (é)</label></div>
+                                <div class="checkbox-item"><input type="checkbox" id="diacriticGrave"><label for="diacriticGrave">Grave accent (è)</label></div>
+                                <div class="checkbox-item"><input type="checkbox" id="diacriticCircumflex"><label for="diacriticCircumflex">Circumflex (ê)</label></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Grammar Section -->
+                <section id="grammar" class="section">
+                    <h2><i class="fas fa-book"></i> Grammar & Syntax</h2>
+                    <p class="help-text">Define the grammatical rules and sentence structure</p>
+                    
+                    <div class="form-group">
+                        <label>Word Order</label>
+                        <select id="wordOrder">
+                            <option value="SVO">SVO (Subject-Verb-Object)</option>
+                            <option value="SOV">SOV (Subject-Object-Verb)</option>
+                            <option value="VSO">VSO (Verb-Subject-Object)</option>
+                            <option value="VOS">VOS (Verb-Object-Subject)</option>
+                            <option value="OSV">OSV (Object-Subject-Verb)</option>
+                            <option value="OVS">OVS (Object-Verb-Subject)</option>
+                            <option value="free">Free Word Order</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Grammatical Cases</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item"><input type="checkbox" id="caseNominative" checked><label for="caseNominative">Nominative</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="caseAccusative" checked><label for="caseAccusative">Accusative</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="caseGenitive"><label for="caseGenitive">Genitive</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="caseDative"><label for="caseDative">Dative</label></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Verb Tenses</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item"><input type="checkbox" id="tensePresent" checked><label for="tensePresent">Present</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="tensePast" checked><label for="tensePast">Past</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="tenseFuture"><label for="tenseFuture">Future</label></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Grammatical Aspects</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item"><input type="checkbox" id="aspectPerfective"><label for="aspectPerfective">Perfective</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="aspectImperfective"><label for="aspectImperfective">Imperfective</label></div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Morphology Section -->
+                <section id="morphology" class="section">
+                    <h2><i class="fas fa-shapes"></i> Morphology</h2>
+                    <p class="help-text">Define how words are formed and modified</p>
+                    
+                    <div class="form-group">
+                        <label>Morphological Type</label>
+                        <select id="morphologyType">
+                            <option value="isolating">Isolating (Analytic)</option>
+                            <option value="agglutinative">Agglutinative</option>
+                            <option value="fusional">Fusional (Inflectional)</option>
+                            <option value="polysynthetic">Polysynthetic</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Noun Inflections</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item"><input type="checkbox" id="nounNumber"><label for="nounNumber">Number</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="nounGender"><label for="nounGender">Gender/Class</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="nounCase"><label for="nounCase">Case</label></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Verb Inflections</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item"><input type="checkbox" id="verbTense"><label for="verbTense">Tense</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="verbAspect"><label for="verbAspect">Aspect</label></div>
+                            <div class="checkbox-item"><input type="checkbox" id="verbMood"><label for="verbMood">Mood</label></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Derivational Morphology</label>
+                        <textarea id="derivationalMorphology" placeholder="Describe how new words are formed from existing roots"></textarea>
+                    </div>
+                </section>
+                
+                <!-- Lexicon Section -->
+                <section id="lexicon" class="section">
+                    <h2><i class="fas fa-book-open"></i> Lexicon Builder</h2>
+                    <p class="help-text">Build the vocabulary of your language</p>
+                    
+                    <div class="form-group">
+                        <label>Word</label>
+                        <input type="text" id="lexiconWord" placeholder="Enter word in your language">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Meaning</label>
+                        <input type="text" id="lexiconMeaning" placeholder="Enter meaning in English">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Part of Speech</label>
+                        <select id="lexiconPOS">
+                            <option value="noun">Noun</option>
+                            <option value="verb">Verb</option>
+                            <option value="adjective">Adjective</option>
+                            <option value="adverb">Adverb</option>
+                        </select>
+                    </div>
+                    
+                    <button class="generate-btn" onclick="addToLexicon()"><i class="fas fa-plus"></i> Add to Lexicon</button>
+                    
+                    <div class="form-group">
+                        <label>Lexicon Entries</label>
+                        <div id="lexiconEntries" style="max-height: 200px; overflow-y: auto; margin-top: 15px;">
+                            <p class="help-text">No entries yet. Add words to build your lexicon.</p>
+                        </div>
+                    </div>
+                    
+                    <button class="export-btn" onclick="exportLexicon()"><i class="fas fa-download"></i> Export Lexicon</button>
+                </section>
+                
+                <!-- Numbers Section -->
+                <section id="numbers" class="section">
+                    <h2><i class="fas fa-calculator"></i> Number System</h2>
+                    <p class="help-text">Define how numbers are expressed in your language</p>
+                    
+                    <div class="form-group">
+                        <label>Numeral System</label>
+                        <select id="numeralSystem">
+                            <option value="decimal">Decimal (Base-10)</option>
+                            <option value="binary">Binary (Base-2)</option>
+                            <option value="quinary">Quinary (Base-5)</option>
+                            <option value="octal">Octal (Base-8)</option>
+                            <option value="duodecimal">Duodecimal (Base-12)</option>
+                            <option value="vigesimal">Vigesimal (Base-20)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Number Words</label>
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center;">
+                            <span>0:</span><input type="text" id="number0" placeholder="Word for zero">
+                            <span>1:</span><input type="text" id="number1" placeholder="Word for one">
+                            <span>2:</span><input type="text" id="number2" placeholder="Word for two">
+                            <span>5:</span><input type="text" id="number5" placeholder="Word for five">
+                            <span>10:</span><input type="text" id="number10" placeholder="Word for ten">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Number Formation Rules</label>
+                        <textarea id="numberFormation" placeholder="Describe how larger numbers are formed"></textarea>
+                    </div>
+                </section>
+                
+                <!-- Advanced Section -->
+                <section id="advanced" class="section">
+                    <h2><i class="fas fa-cogs"></i> Advanced Features</h2>
+                    <p class="help-text">Configure advanced linguistic features</p>
+                    
+                    <div class="form-group">
+                        <label>Information Structure</label>
+                        <textarea id="informationStructure" placeholder="Describe how topic, focus, and emphasis are expressed"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Evidentiality</label>
+                        <select id="evidentiality">
+                            <option value="none">No evidentiality marking</option>
+                            <option value="direct">Direct evidence</option>
+                            <option value="reported">Reported/hearsay</option>
+                            <option value="inferred">Inferred</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Politeness Levels</label>
+                        <select id="politenessLevels">
+                            <option value="none">No special politeness forms</option>
+                            <option value="simple">Simple polite/impolite distinction</option>
+                            <option value="honorifics">Honorifics</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Register Variation</label>
+                        <textarea id="registerVariation" placeholder="Describe differences between formal and informal registers"></textarea>
+                    </div>
+                </section>
+                
+                <!-- Generate Section -->
+                <section id="generate" class="section">
+                    <h2><i class="fas fa-magic"></i> Generate Your Language</h2>
+                    <p class="help-text">Create sample words and texts based on your language settings</p>
+                    
+                    <div class="form-group">
+                        <label>Number of Sample Words to Generate</label>
+                        <input type="number" id="wordCount" value="10" min="5" max="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Generate Sample Text</label>
+                        <select id="sampleTextType">
+                            <option value="simple">Simple Sentences</option>
+                            <option value="story">Short Story</option>
+                            <option value="poem">Poem</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Validation Rules</label>
+                        <div id="validationResults">
+                            <p class="validation-ok">All rules will be validated before generation</p>
+                        </div>
+                    </div>
+                    
+                    <button id="generateBtn" class="generate-btn"><i class="fas fa-cogs"></i> Generate Language</button>
+                    <button id="exportDocBtn" class="export-btn"><i class="fas fa-download"></i> Export Documentation</button>
+                    
+                    <div class="output-area">
+                        <h3>Your Language Documentation</h3>
+                        <div id="languageDoc" class="language-doc">
+                            <p>Your language documentation will appear here after generation.</p>
+                        </div>
+                        
+                        <h3>Sample Output</h3>
+                        <button id="toggleBreakdown" class="translation-toggle"><i class="fas fa-list"></i> Show Translation Breakdown</button>
+                        
+                        <div id="translationBreakdown" class="translation-breakdown">
+                            <p class="help-text">Gloss abbreviations: NOM=Nominative, ACC=Accusative, GEN=Genitive, PST=Past, PRS=Present</p>
+                        </div>
+                        
+                        <div id="languageOutput" class="language-output">Your generated language output will appear here...</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+        
+        <!-- Ad Banner -->
+        <div class="ad-banner">
+            <div class="ad-label">Advertisement</div>
+            <div class="ad-placeholder">Ad Space (728×90)</div>
+        </div>
+    </div>
+
+    <script>
+        // Language rules storage
+        const languageRules = {
+            phonology: { consonants: [], vowels: [], additionalPhonemes: [], features: {} },
+            syllableStructure: "CV",
+            allowedOnsets: [],
+            allowedCodas: [],
+            wordOrder: "SVO",
+            grammar: {
+                cases: { nominative: true, accusative: true },
+                tenses: { present: true, past: true },
+                aspects: {},
+                moods: { indicative: true }
+            },
+            lexicon: []
+        };
+
+        // Navigation functionality
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                
+                this.classList.add('active');
+                
+                const target = this.getAttribute('data-target');
+                document.getElementById(target).classList.add('active');
+                
+                updateComplexity(target);
+            });
+        });
+        
+        // Advanced options toggle
+        function toggleAdvancedOptions(id) {
+            const options = document.getElementById(id);
+            options.style.display = options.style.display === 'block' ? 'none' : 'block';
+        }
+        
+        // Update complexity meter
+        function updateComplexity(section) {
+            const complexityMap = {
+                'phonology': 20, 'syllables': 30, 'phonotactics': 40, 'orthography': 50,
+                'grammar': 60, 'morphology': 70, 'lexicon': 80, 'numbers': 85, 'advanced': 90, 'generate': 100
+            };
+            
+            const complexity = complexityMap[section] || 20;
+            document.getElementById('complexityFill').style.width = `${complexity}%`;
+            
+            let complexityText = 'Low';
+            if (complexity >= 70) complexityText = 'High';
+            else if (complexity >= 40) complexityText = 'Medium';
+            
+            document.getElementById('complexityText').textContent = complexityText;
+        }
+        
+        // Validate language rules before generation
+        function validateLanguageRules() {
+            const errors = [];
+            const warnings = [];
+            
+            // Check if at least 5 consonants are selected
+            const selectedConsonants = Array.from(document.querySelectorAll('#consonants input:checked'));
+            if (selectedConsonants.length < 5) {
+                errors.push("Select at least 5 consonants for your language");
+            } else {
+                languageRules.phonology.consonants = selectedConsonants.map(c => c.id.replace('consonant-', ''));
+            }
+            
+            // Check if at least 3 vowels are selected
+            const selectedVowels = Array.from(document.querySelectorAll('#vowels input:checked'));
+            if (selectedVowels.length < 3) {
+                errors.push("Select at least 3 vowels for your language");
+            } else {
+                languageRules.phonology.vowels = selectedVowels.map(v => v.id.replace('vowel-', ''));
+            }
+            
+            // Check additional phonemes
+            const additionalPhonemes = document.getElementById('additionalPhonemes').value;
+            if (additionalPhonemes) {
+                languageRules.phonology.additionalPhonemes = additionalPhonemes.split(',').map(p => p.trim());
+            }
+            
+            // Check syllable structure
+            const syllableStructure = document.getElementById('syllableStructure').value;
+            languageRules.syllableStructure = syllableStructure;
+            
+            // Check allowed onsets and codas
+            const allowedOnsets = document.getElementById('allowedOnsets').value;
+            if (allowedOnsets) {
+                languageRules.allowedOnsets = allowedOnsets.split(',').map(o => o.trim());
+            }
+            
+            const allowedCodas = document.getElementById('allowedCodas').value;
+            if (allowedCodas) {
+                languageRules.allowedCodas = allowedCodas.split(',').map(c => c.trim());
+            }
+            
+            // Check word order
+            const wordOrder = document.getElementById('wordOrder').value;
+            languageRules.wordOrder = wordOrder;
+            
+            // Update validation results
+            const validationResults = document.getElementById('validationResults');
+            validationResults.innerHTML = '';
+            
+            if (errors.length > 0) {
+                validationResults.innerHTML = errors.map(error => 
+                    `<p class="validation-error"><i class="fas fa-exclamation-circle"></i> ${error}</p>`
+                ).join('');
+                return false;
+            } else {
+                validationResults.innerHTML = `<p class="validation-ok"><i class="fas fa-check-circle"></i> All basic rules are properly configured</p>`;
+                return true;
+            }
+        }
+        
+        // Generate a syllable based on the defined structure
+        function generateSyllable() {
+            const structure = languageRules.syllableStructure;
+            let syllable = '';
+            
+            // Convert structure to pattern (e.g., "CVC" becomes ["C", "V", "C"])
+            const pattern = structure.split('');
+            
+            for (const unit of pattern) {
+                if (unit === 'C') {
+                    // Select a random consonant
+                    const randomIndex = Math.floor(Math.random() * languageRules.phonology.consonants.length);
+                    syllable += languageRules.phonology.consonants[randomIndex];
+                } else if (unit === 'V') {
+                    // Select a random vowel
+                    const randomIndex = Math.floor(Math.random() * languageRules.phonology.vowels.length);
+                    syllable += languageRules.phonology.vowels[randomIndex];
+                } else {
+                    // Handle custom elements
+                    syllable += unit;
+                }
+            }
+            
+            return syllable;
+        }
+        
+        // Generate a word based on the language rules
+        function generateWord() {
+            // Determine word length (1-3 syllables)
+            const syllableCount = Math.floor(Math.random() * 3) + 1;
+            let word = '';
+            
+            for (let i = 0; i < syllableCount; i++) {
+                word += generateSyllable();
+            }
+            
+            return word;
+        }
+        
+        // Add word to lexicon
+        function addToLexicon() {
+            const word = document.getElementById('lexiconWord').value;
+            const meaning = document.getElementById('lexiconMeaning').value;
+            const pos = document.getElementById('lexiconPOS').value;
+            
+            if (!word || !meaning) {
+                alert("Please enter both a word and its meaning");
+                return;
+            }
+            
+            languageRules.lexicon.push({ word, meaning, pos });
+            
+            // Update lexicon display
+            const entriesContainer = document.getElementById('lexiconEntries');
+            if (languageRules.lexicon.length === 1) {
+                entriesContainer.innerHTML = '';
+            }
+            
+            const entry = document.createElement('div');
+            entry.style.padding = '8px';
+            entry.style.borderBottom = '1px solid #eee';
+            entry.innerHTML = `<strong>${word}</strong> (${pos}) - ${meaning}`;
+            
+            entriesContainer.appendChild(entry);
+            
+            // Clear form
+            document.getElementById('lexiconWord').value = '';
+            document.getElementById('lexiconMeaning').value = '';
+        }
+        
+        // Export lexicon
+        function exportLexicon() {
+            if (languageRules.lexicon.length === 0) {
+                alert("No words in lexicon to export");
+                return;
+            }
+            
+            let exportData = "Word,Part of Speech,Meaning\n";
+            languageRules.lexicon.forEach(entry => {
+                exportData += `"${entry.word}","${entry.pos}","${entry.meaning}"\n`;
+            });
+            
+            const blob = new Blob([exportData], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'conlang-lexicon.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Generate language based on rules
+        function generateLanguage() {
+            if (!validateLanguageRules()) {
+                alert("Please fix validation errors before generating your language");
+                return;
+            }
+            
+            const wordCount = document.getElementById('wordCount').value;
+            const textType = document.getElementById('sampleTextType').value;
+            
+            // Show generating message
+            document.getElementById('languageOutput').textContent = `Generating ${wordCount} sample words with ${textType} text...`;
+            
+            // Simulate generation process
+            setTimeout(() => {
+                // Apply language rules to generate text
+                const generatedText = applyLanguageRules(wordCount, textType);
+                
+                document.getElementById('languageOutput').textContent = generatedText;
+                
+                document.getElementById('languageDoc').innerHTML = `
+                    <h4>Phonology Summary</h4>
+                    <p>Your language has ${languageRules.phonology.consonants.length} consonants and ${languageRules.phonology.vowels.length} vowels.</p>
+                    <h4>Syllable Structure</h4>
+                    <p>${languageRules.syllableStructure} pattern</p>
+                    <h4>Word Order</h4>
+                    <p>${languageRules.wordOrder}</p>
+                    <h4>Sample Vocabulary</h4>
+                    <ul>
+                        <li>${generateWord()} - person</li>
+                        <li>${generateWord()} - see</li>
+                        <li>${generateWord()} - forest</li>
+                        <li>${generateWord()} - beautiful</li>
+                        <li>${generateWord()} - walk</li>
+                    </ul>
+                `;
+            }, 1000);
+        }
+        
+        // Apply language rules to generate text
+        function applyLanguageRules(wordCount, textType) {
+            // Generate sample words
+            let output = "Generated Words:\n";
+            const words = [];
+            
+            for (let i = 0; i < wordCount; i++) {
+                const word = generateWord();
+                words.push(word);
+                output += `${word} `;
+                
+                if ((i + 1) % 5 === 0) output += "\n";
+            }
+            
+            output += "\n\nSample Text:\n";
+            
+            // Generate sample text based on type
+            if (textType === "simple") {
+                output += `${words[0]} ${words[3]} ${words[5]}.\n`;
+                output += `${words[1]} ${words[4]} ${words[6]}.\n`;
+                output += `${words[2]} ${words[3]} ${words[7]}!`;
+            } else if (textType === "story") {
+                output += `${words[0]} ${words[3]} ${words[5]}.\n`;
+                output += `${words[1]} ${words[4]} ${words[6]} ${words[2]}.\n`;
+                output += `${words[0]} ${words[4]} ${words[7]}!`;
+            } else if (textType === "poem") {
+                output += `${words[0]}, ${words[1]},\n`;
+                output += `${words[2]} ${words[3]}.\n`;
+                output += `${words[4]} ${words[5]},\n`;
+                output += `${words[6]} ${words[7]}.`;
+            }
+            
+            // Add note about following rules
+            output += "\n\n[Generated text follows all configured language rules]";
+            
+            return output;
+        }
+        
+        // Initialize with some sample consonants and vowels
+        function initPhonologyCheckboxes() {
+            const consonants = [
+                'p', 'b', 't', 'd', 'k', 'g', 'm', 'n', 'ŋ', 'f', 
+                'v', 'θ', 'ð', 's', 'z', 'ʃ', 'ʒ', 'h', 'l', 'r', 'j', 'w'
+            ];
+            
+            const vowels = [
+                'i', 'e', 'a', 'o', 'u', 'y', 'ø', 'æ'
+            ];
+            
+            const consonantsContainer = document.getElementById('consonants');
+            const vowelsContainer = document.getElementById('vowels');
+            
+            consonants.forEach(consonant => {
+                const item = document.createElement('div');
+                item.className = 'checkbox-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="consonant-${consonant}" checked>
+                    <label for="consonant-${consonant}">/${consonant}/</label>
+                `;
+                consonantsContainer.appendChild(item);
+            });
+            
+            vowels.forEach(vowel => {
+                const item = document.createElement('div');
+                item.className = 'checkbox-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="vowel-${vowel}" checked>
+                    <label for="vowel-${vowel}">/${vowel}/</label>
+                `;
+                vowelsContainer.appendChild(item);
+            });
+            
+            // Add event listeners to update validation
+            document.querySelectorAll('#consonants input, #vowels input, #additionalPhonemes, #syllableStructure, #allowedOnsets, #allowedCodas, #wordOrder').forEach(element => {
+                element.addEventListener('change', validateLanguageRules);
+            });
+        }
+        
+        // Initialize the application
+        initPhonologyCheckboxes();
+        validateLanguageRules();
+        
+        // Show custom syllable input when custom is selected
+        document.getElementById('syllableStructure').addEventListener('change', function() {
+            document.getElementById('customSyllableGroup').style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+        
+        // Generate button functionality
+        document.getElementById('generateBtn').addEventListener('click', generateLanguage);
+        
+        // Toggle translation breakdown
+        document.getElementById('toggleBreakdown').addEventListener('click', function() {
+            const breakdown = document.getElementById('translationBreakdown');
+            if (breakdown.style.display === 'block') {
+                breakdown.style.display = 'none';
+                this.innerHTML = '<i class="fas fa-list"></i> Show Translation Breakdown';
+            } else {
+                breakdown.style.display = 'block';
+                this.innerHTML = '<i class="fas fa-list"></i> Hide Translation Breakdown';
+            }
+        });
+    </script>
+</body>
+</html>
